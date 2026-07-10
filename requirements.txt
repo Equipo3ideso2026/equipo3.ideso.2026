@@ -6,4 +6,5 @@ numpy
 plotly>=5.22
 yfinance>=0.2.40
 scikit-learn>=1.4
+tensorflow
 vaderSentiment>=3.3.2
