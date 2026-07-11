@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvestAI — Portal</title>
+<link rel="stylesheet" href="investai-style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">Ernesto Investing AI<small>SISTEMA OPERACIONAL · iDeSo UNMSM-FISI</small></div>
+  <span id="pill" class="status-pill"><span class="dot"></span><span id="pillTxt">sin conexión</span></span>
+</header>
+<div class="veta"></div>
+
+<main>
+  <div class="card">
+    <h1>Portal de conexión</h1>
+    <p class="lead">Pega la URL pública de ngrok generada por el Notebook 3 (API FastAPI) y verifica la conexión antes de abrir los módulos.</p>
+    <label for="apiUrl">URL de la API (ngrok)</label>
+    <div style="display:flex;gap:10px;">
+      <input type="text" id="apiUrl" placeholder="https://xxxxx.ngrok-free.app">
+      <button class="primary" id="btnVerificar">Verificar</button>
+    </div>
+    <div id="resultado" style="margin-top:14px;"></div>
+  </div>
+
+  <div class="card">
+    <h2>Módulos del sistema</h2>
+    <div class="grid-cards">
+      <a class="module-card" href="modulo_mercado.html">
+        <span class="eyebrow">Fase 3 · Mercado</span>
+        <h3>Dashboard de mercado</h3>
+        <p>Serie OHLCV, velas japonesas e indicadores técnicos (SMA, EMA, RSI) por ticker minero.</p>
+      </a>
+      <a class="module-card" href="modulo_svc.html">
+        <span class="eyebrow">Fase 3 · Modelo IA</span>
+        <h3>Clasificador SVC</h3>
+        <p>Señal vigente BUY/SELL, nivel de confianza e hiperparámetros del modelo entrenado.</p>
+      </a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Los 5 activos del proyecto</h2>
+    <div class="ticker-row" id="tickerList"></div>
+    <p class="notice">Si la API no está disponible, cada módulo funciona en <strong>modo demo</strong> con datos simulados, para que la interfaz sea siempre revisable.</p>
+  </div>
+</main>
+<footer>InvestAI · Sistema Ernesto Investing AI · Prof. Cancho-Rodríguez · iDeSo 2026-II</footer>
+
+<script src="investai-api.js"></script>
+<script>
+const input = document.getElementById('apiUrl');
+const pill = document.getElementById('pill');
+const pillTxt = document.getElementById('pillTxt');
+const resultado = document.getElementById('resultado');
+
+input.value = InvestAI.getUrl();
+
+document.getElementById('tickerList').innerHTML = InvestAI.TICKERS
+  .map(t => `<button disabled>${t.ticker}</button>`).join('');
+
+function setPill(ok, txt){
+  pill.className = 'status-pill ' + (ok ? 'ok' : 'bad');
+  pillTxt.textContent = txt;
+}
+
+async function verificar(){
+  InvestAI.setUrl(input.value);
+  if(!input.value.trim()){ resultado.innerHTML=''; setPill(false,'sin conexión'); return; }
+  resultado.innerHTML = '<p class="notice">Verificando…</p>';
+  try{
+    const salud = await InvestAI.salud();
+    setPill(true, 'API conectada');
+    resultado.innerHTML = `<div class="notice">✅ ${salud.servicio} v${salud.version} — MongoDB: ${salud.mongodb_conectado ? 'conectado' : 'desconectado'} ·
+      ${salud.documentos_precios_ohlcv ?? '—'} precios · ${salud.documentos_predicciones ?? '—'} predicciones</div>`;
+  }catch(e){
+    setPill(false, 'sin conexión');
+    resultado.innerHTML = `<div class="notice warn">⚠️ No se pudo conectar (${e.message}). Verifica la URL o continúa en modo demo desde los módulos.</div>`;
+  }
+}
+
+document.getElementById('btnVerificar').addEventListener('click', verificar);
+if(input.value) verificar();
+</script>
+</body>
+</html>
