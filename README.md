@@ -1,124 +1,186 @@
-[README.md](https://github.com/user-attachments/files/29870342/README.md)
-# InvestAI — Sistema Web de Apoyo en Decisiones de Inversión con IA
+# 📈 InvestAI — Sistema de Apoyo en Decisiones de Inversión con IA
 
-> **iDeSo · FISI · UNMSM · Grupo 10 · 2026-II**
-> Profesor: Mg. Ing. Ernesto D. Cancho-Rodríguez, MBA (GWU)
-
----
-
-## 🌐 Prototipo en vivo (GitHub Pages)
-
-**URL:** `https://JoseJamirSanchezHinostroza.github.io/PrediccionBursatilG3/`
+**Ernesto Investing AI** · Sistema operacional para la exposición final de proyectos
+Universidad Nacional Mayor de San Marcos (UNMSM) · Facultad de Ingeniería de Sistemas e Informática (FISI)
+Introducción al Desarrollo de Software (iDeSo) · 2026-II · Grupo 10
 
 ---
 
-## 📋 Descripción del Proyecto
+## 🎯 Descripción
 
-**InvestAI** es un Sistema Web de Apoyo en Decisiones de Inversión Bursátil (DSS) desarrollado íntegramente con asistencia de Inteligencia Artificial (Claude Sonnet 4.6). El sistema analiza cinco activos mineros con operaciones en Perú:
+InvestAI es un sistema de análisis bursátil enfocado en 5 empresas mineras con presencia en el mercado
+peruano. Combina cuatro enfoques de Machine Learning / NLP para generar señales de inversión (BUY/SELL)
+y predicciones de precio:
 
-| Ticker | Empresa |
-|--------|---------|
-| BVN | Buenaventura (NYSE) |
-| FSM | Fortuna Silver Mines |
-| ABX.TO | Barrick Gold (TSX) |
-| BHP | BHP Group (NYSE) |
-| VOLCABC1.LM | Volcán Compañía Minera (BVL) |
+| Modelo | Tarea | Librería |
+|---|---|---|
+| **SVC** (Support Vector Classifier) | Clasificación BUY/SELL con `GridSearchCV` + `TimeSeriesSplit` | scikit-learn |
+| **RNN** (SimpleRNN, GRU, LSTM) | Clasificación BUY/SELL con redes recurrentes | TensorFlow/Keras |
+| **LSTM Regressor** | Predicción de precio a 7/14/30/60 días con bandas de confianza 95% | TensorFlow/Keras |
+| **VADER** | Análisis de sentimiento sobre noticias de Yahoo Finance | vaderSentiment |
+
+### Tickers analizados
+
+| Ticker | Empresa | Bolsa |
+|---|---|---|
+| `FSM` | Fortuna Silver Mines | NYSE |
+| `VOLCABC1.LM` | Volcan Compañía Minera | BVL |
+| `ABX.TO` | Barrick Gold | TSX |
+| `BVN` | Buenaventura | NYSE |
+| `BHP` | BHP Group | NYSE |
 
 ---
 
-## 🏗️ Estructura del Repositorio
+## 🏗️ Arquitectura
+
+El sistema tiene **dos frentes de despliegue independientes**, ambos leen/escriben en la misma base de
+datos MongoDB Atlas:
+
+### 1. Frontend HTML + Backend FastAPI (Colab + ngrok)
+```
+yfinance -> MongoDB Atlas -> Notebooks (SVC/RNN/LSTM/NLP) -> MongoDB Atlas
+    -> FastAPI + ngrok (API REST) -> Frontend HTML (fetch + Plotly.js)
+```
+Carpeta `frontend/` + notebooks en `notebooks/`. Requiere tener el notebook de la API corriendo en
+Google Colab con ngrok activo mientras se usa el frontend.
+
+### 2. App Streamlit — **100% autónoma** (sin Colab/ngrok/notebooks) ⭐
+```
+Streamlit Cloud (app.py) -> yfinance (descarga en vivo)
+    -> indicadores técnicos -> SVC / RNN / LSTM (TensorFlow) -> VADER
+    -> MongoDB Atlas (persistencia) -> Visualización (Plotly)
+```
+Un único archivo `app.py`, desplegado en Streamlit Community Cloud con URL permanente. Hace todo el
+pipeline por sí mismo cuando el usuario lo solicita desde la interfaz — no depende de que ningún notebook
+de Colab esté corriendo.
+
+**Reglas de rendimiento** (para no exceder los límites del free tier de Streamlit Cloud):
+- Ingesta OHLCV + indicadores + SVC + NLP: automáticos, ligeros, con caché por antigüedad (6h / 3h).
+- RNN (SimpleRNN/GRU/LSTM) y Regresor LSTM: **solo se entrenan para el ticker seleccionado**, y **solo al
+  pulsar el botón correspondiente** — nunca para los 5 tickers simultáneamente.
+
+---
+
+## 📂 Estructura del repositorio
 
 ```
-investai/
-├── index.html                          ← Entrada: redirige al login
-├── README.md
-├── HTML/
-│   ├── 1.-Autenticacion/
-│   │   └── 01_autenticacion_v2.html   ← GUI-01: Login
-│   ├── 2.-Visualizacion/
-│   │   └── Html_2.html                ← GUI-02: Mercado (OHLCV + indicadores)
-│   ├── 3.-PrediccionSVC/
-│   │   └── 3_svc_clasificador_tendencia_html.html  ← GUI-03: Clasificador SVC
-│   ├── 4.-PrediccionLSTM/
-│   │   └── 4_lstm_regressor_prediccion_html.html   ← GUI-04: Regresor LSTM
-│   ├── 5.-AnalisisNLP/
-│   │   └── Html_5.html                ← GUI-05: Sentimiento NLP
-│   ├── 6.-GeneracionEstrategias/
-│   │   └── 6__Generacion_de_estrategias.html       ← GUI-06: Estrategias IA
-│   ├── 7.-GestionPortafolio/
-│   │   └── 7__Gestion_de_portafolio.html           ← GUI-07: Portafolio
-│   ├── 8.-EnvioSenalesBroker/
-│   │   └── 8_señales_broker.html      ← GUI-08: Señales & Broker
-│   ├── 9.-DashboardCompleto/
-│   │   └── 09_dashboard_completo_v2.html           ← GUI-09: Dashboard
-│   ├── 10.-ConsolaModelosIA/
-│   │   └── 10_consola_modelos_ia.html ← GUI-10: Consola Modelos IA
-│   └── 11.-ReportesBacktesting/
-│       └── 11_reporte_backtesting.html ← GUI-11: Backtesting
-├── COLABS/
-│   ├── 1_Ingesta_de_Datos_Reales_con_yfinance.ipynb
-│   ├── 2_Clasificador_SVC.ipynb
-│   ├── 3_Clasificadores_RNN.ipynb
-│   ├── 4_Regresor_LSTM.ipynb
-│   ├── 5_Análisis_de_Sentimiento_NLP_con_VADER.ipynb
-│   └── InvestAI_API_FastAPI_Colab_ngrok_v2.ipynb  ← API FastAPI + ngrok
-└── docs/
-    └── Articulo_Cientifico_InvestAI_Grupo10.docx
+ernesto-investing-ai/
+├── README.md                          # Este archivo
+├── requirements.txt                   # Dependencias de la app Streamlit
+├── app.py                             # App Streamlit autónoma (bono)
+│
+├── frontend/                          # Interfaces web (HTML + API FastAPI)
+│   ├── index.html                     # Portal de entrada
+│   ├── 01_autenticacion.html          # Login
+│   ├── 02_mercado.html                # Candlestick + indicadores
+│   ├── 03_clasificador_svc.html       # Señal SVC
+│   ├── 04_regresor_lstm.html          # Predicción LSTM
+│   ├── 05_analisis_nlp.html           # Sentimiento VADER
+│   ├── 06_estrategias.html            # Consenso de modelos
+│   ├── 07_portafolio.html             # Portafolio simulado
+│   ├── 08_broker.html                 # Señales en tiempo real
+│   ├── 09_dashboard_completo.html     # Dashboard consolidado
+│   ├── 10_consola_ia.html             # Comparativa RNN
+│   └── 11_backtesting.html            # Reportes real vs. predicho
+│
+└── notebooks/                         # Google Colab
+    ├── Notebook1_Ingesta_MongoDB.ipynb
+    ├── Notebook2_SVC_MongoDB.ipynb
+    ├── Notebook3_RNN_MongoDB.ipynb
+    ├── Notebook4_LSTM_MongoDB.ipynb
+    ├── Notebook5_Sentimiento_MongoDB.ipynb
+    └── Notebook6_API_FastAPI.ipynb
 ```
 
 ---
 
-## 🚀 Cómo correr el Backend
+## 🗄️ Colecciones de MongoDB Atlas
 
-1. Abrir `notebooks/InvestAI_API_FastAPI_Colab_ngrok_v2.ipynb` en Google Colab
-2. Ejecutar **todas las celdas en orden**
-3. Copiar la URL pública que aparece:
-   ```
-   🌐 API pública disponible en: https://xxxx.ngrok-free.app
-   ```
-4. Ir al sitio en GitHub Pages → campo **"URL del Backend ngrok"** → pegar URL → **Iniciar Sesión**
-
-### Endpoints de la API
-
-| Endpoint | Descripción |
-|----------|-------------|
-| `GET /api/salud` | Health check |
-| `GET /api/mercado/{ticker}` | OHLCV + indicadores técnicos |
-| `GET /api/svc/{ticker}` | Señales SVC (BUY/SELL/HOLD) |
-| `GET /api/rnns/{ticker}` | 4 clasificadores RNN comparativos |
-| `GET /api/lstm/{ticker}?horizonte=N` | Pronóstico de precio LSTM |
-| `GET /api/nlp/{ticker}` | Análisis de sentimiento NLP-VADER |
-
-Documentación Swagger UI: `https://xxxx.ngrok-free.app/docs`
+| Colección | Contenido | Escrita por |
+|---|---|---|
+| `precios_ohlcv` | OHLCV + SMA/EMA/RSI por ticker/fecha | Notebook 1 · `app.py` |
+| `predicciones` | Señal vigente del SVC | Notebook 2 · `app.py` |
+| `predicciones_rnn` | Señal vigente por arquitectura RNN | Notebook 3 · `app.py` |
+| `predicciones_lstm` | Predicciones futuras + histórico de test | Notebook 4 · `app.py` |
+| `sentimiento_resumen` | Score compound promedio + distribución | Notebook 5 · `app.py` |
+| `sentimiento_noticias` | Noticias individuales con score VADER | Notebook 5 · `app.py` |
+| `metricas_modelos` | Historial de métricas de entrenamiento | Notebooks 2-4 · `app.py` |
 
 ---
 
-## 🛠️ Stack Tecnológico
+## 🚀 Despliegue de la app Streamlit (autónoma)
 
-**Frontend:** HTML5 · CSS3 · JavaScript ES2022 · Chart.js · Plotly.js · Google Fonts (Sora/Inter)
+### 1. Requisitos previos
+- Cuenta de [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) con un clúster M0 (gratuito).
+- Un usuario de base de datos (Database Access) con usuario/contraseña.
+- Acceso de red abierto (`0.0.0.0/0`) en Network Access, para que Streamlit Cloud pueda conectarse.
+- Cuenta de [Streamlit Community Cloud](https://share.streamlit.io) vinculada a GitHub.
 
-**Backend:** Python 3.10 · FastAPI · TensorFlow/Keras · scikit-learn · yfinance · NLTK/VADER · ngrok
+### 2. Obtener la cadena de conexión
+En Atlas → **Connect** → **Drivers** → Python. Copia la URI (tiene el formato):
+```
+mongodb+srv://usuario:<password>@cluster0.xxxxxx.mongodb.net/?retryWrites=true&w=majority
+```
+Reemplaza `<password>` por la contraseña real del usuario de base de datos.
 
-**Despliegue:** GitHub Pages (frontend estático) + Google Colab + ngrok (backend dinámico)
+### 3. Configurar el secret en Streamlit Cloud
+En tu app → **Settings → Secrets**:
+```toml
+MONGO_URI = "mongodb+srv://usuario:password@cluster0.xxxxxx.mongodb.net/?retryWrites=true&w=majority"
+```
+
+### 4. Deploy
+1. Sube `app.py` y `requirements.txt` a la raíz del repo en GitHub.
+2. En share.streamlit.io → **New app** → selecciona el repo, rama `main`, archivo `app.py`.
+3. En **Settings → General**, fija la versión de **Python 3.11** (evita incompatibilidades de TensorFlow
+   con versiones de Python muy recientes).
+4. Deploy. El primer build tarda unos minutos extra por la instalación de TensorFlow.
+
+### 5. Uso
+- Al abrir la app, selecciona un ticker en la barra lateral.
+- Los módulos **Dashboard**, **Mercado**, **Clasificador SVC** y **Sentimiento NLP** se actualizan
+  automáticamente (con caché).
+- En **Consola RNN** y **Regresor LSTM**, pulsa el botón de entrenamiento para ese ticker — el resultado
+  queda guardado en MongoDB y disponible en el resto de módulos hasta que se reentrene.
+- **Señales Broker** y **Portafolio simulado** agregan los 5 tickers usando lo ya calculado.
 
 ---
 
-## 📊 Módulos del Sistema
+## 🖥️ Ejecutar localmente (opcional)
 
-| Código | Módulo | Descripción |
-|--------|--------|-------------|
-| GUI-01 | Autenticación | Login, registro, recuperación de contraseña |
-| GUI-02 | Visualización | Candlesticks, SMA/EMA/Bollinger, RSI, MACD |
-| GUI-03 | SVC Classifier | Señal BUY/SELL/HOLD con SVM kernel RBF |
-| GUI-04 | LSTM Regressor | Pronóstico de precios con bandas de confianza |
-| GUI-05 | NLP Sentimiento | VADER sobre noticias de Yahoo Finance |
-| GUI-06 | Estrategias IA | Recomendaciones basadas en modelos combinados |
-| GUI-07 | Portafolio | Distribución de activos, P&L, equity curve |
-| GUI-08 | Señales Broker | Envío de órdenes a Interactive Brokers |
-| GUI-09 | Dashboard | Panel consolidado de todos los módulos |
-| GUI-10 | Consola IA | Configuración de los 16 modelos predictivos |
-| GUI-11 | Backtesting | Métricas históricas con VectorBT |
+```bash
+git clone <url-del-repo>
+cd ernesto-investing-ai
+pip install -r requirements.txt
+
+mkdir -p .streamlit
+echo 'MONGO_URI = "mongodb+srv://usuario:password@cluster0.xxxxxx.mongodb.net/"' > .streamlit/secrets.toml
+
+streamlit run app.py
+```
 
 ---
 
-*Trabajo Grupal Semana 12 · Prof. E. D. Cancho-Rodríguez, MBA (GWU) · DAISW · FISI · UNMSM · Lima, Perú 2026*
+## 🛠️ Stack tecnológico
+
+- **Datos**: Yahoo Finance vía `yfinance`
+- **Persistencia**: MongoDB Atlas (`pymongo[srv]`, `dnspython`)
+- **ML clásico**: scikit-learn (SVC + GridSearchCV + TimeSeriesSplit)
+- **Deep Learning**: TensorFlow/Keras (SimpleRNN, GRU, LSTM)
+- **NLP**: VADER (`vaderSentiment`)
+- **Visualización**: Plotly / Plotly.js
+- **Backend REST** (frontend HTML): FastAPI + ngrok (Google Colab)
+- **App autónoma**: Streamlit Community Cloud
+
+---
+
+## 👥 Créditos
+
+Proyecto grupal — Grupo 10, iDeSo 2026-II, UNMSM-FISI.
+Curso a cargo del Prof. Mg. Ing. Ernesto D. Cancho-Rodríguez, MBA (The George Washington University).
+
+## ⚠️ Disclaimer
+
+Este sistema es un proyecto académico. Las señales BUY/SELL y predicciones de precio generadas por los
+modelos **no constituyen asesoría financiera**. Los datos son reales (Yahoo Finance) pero los modelos son
+de complejidad limitada y con fines educativos.
