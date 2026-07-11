@@ -69,21 +69,7 @@ ernesto-investing-ai/
 ├── requirements.txt                   # Dependencias de la app Streamlit
 ├── app.py                             # App Streamlit autónoma (bono)
 │
-├── frontend/                          # Interfaces web (HTML + API FastAPI)
-│   ├── index.html                     # Portal de entrada
-│   ├── 01_autenticacion.html          # Login
-│   ├── 02_mercado.html                # Candlestick + indicadores
-│   ├── 03_clasificador_svc.html       # Señal SVC
-│   ├── 04_regresor_lstm.html          # Predicción LSTM
-│   ├── 05_analisis_nlp.html           # Sentimiento VADER
-│   ├── 06_estrategias.html            # Consenso de modelos
-│   ├── 07_portafolio.html             # Portafolio simulado
-│   ├── 08_broker.html                 # Señales en tiempo real
-│   ├── 09_dashboard_completo.html     # Dashboard consolidado
-│   ├── 10_consola_ia.html             # Comparativa RNN
-│   └── 11_backtesting.html            # Reportes real vs. predicho
-│
-└── notebooks/                         # Google Colab
+├── notebooks/                         # Google Colab
     ├── Notebook1_Ingesta_MongoDB.ipynb
     ├── Notebook2_SVC_MongoDB.ipynb
     ├── Notebook3_RNN_MongoDB.ipynb
