@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvestAI — Mercado</title>
+<link rel="stylesheet" href="investai-style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-chart-financial/0.2.1/chartjs-chart-financial.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">Ernesto Investing AI<small>MÓDULO DE MERCADO</small></div>
+  <nav class="tabs">
+    <a href="index.html">Portal</a>
+    <a href="modulo_mercado.html" class="active">Mercado</a>
+    <a href="modulo_svc.html">Clasificador SVC</a>
+  </nav>
+</header>
+<div class="veta"></div>
+
+<main>
+  <div class="card">
+    <div class="ticker-row" id="tickerRow"></div>
+    <div id="banner"></div>
+  </div>
+
+  <div class="card">
+    <h2>Velas OHLCV + medias móviles</h2>
+    <div style="display:flex;gap:16px;margin-bottom:12px;font-size:.82rem;color:var(--muted);">
+      <label style="display:inline-flex;align-items:center;gap:6px;text-transform:none;"><input type="checkbox" id="chkSma" checked> SMA 20/50</label>
+      <label style="display:inline-flex;align-items:center;gap:6px;text-transform:none;"><input type="checkbox" id="chkEma"> EMA 12/26</label>
+    </div>
+    <div style="height:380px;"><canvas id="chartVelas"></canvas></div>
+  </div>
+
+  <div class="card">
+    <h2>RSI-14 (fuerza relativa)</h2>
+    <div style="height:160px;"><canvas id="chartRsi"></canvas></div>
+  </div>
+</main>
+<footer>InvestAI · Fuente: Yahoo Finance vía MongoDB Atlas · API FastAPI + ngrok</footer>
+
+<script src="investai-api.js"></script>
+<script>
+let tickerActual = InvestAI.TICKERS[0].ticker;
+let velasChart, rsiChart;
+const colors = getComputedStyle(document.documentElement);
+const cAccent = '#B5762E', cMalaquita = '#2E8B6B', cText = '#E8E6E1', cMuted = '#8B959A', cBorder = '#2A3438';
+
+document.getElementById('tickerRow').innerHTML = InvestAI.TICKERS.map(t =>
+  `<button data-t="${t.ticker}" class="${t.ticker===tickerActual?'active':''}">${t.ticker}</button>`).join('');
+
+document.getElementById('tickerRow').addEventListener('click', (e) => {
+  const btn = e.target.closest('button'); if(!btn) return;
+  tickerActual = btn.dataset.t;
+  [...document.querySelectorAll('#tickerRow button')].forEach(b => b.classList.toggle('active', b===btn));
+  cargar();
+});
+document.getElementById('chkSma').addEventListener('change', render);
+document.getElementById('chkEma').addEventListener('change', render);
+
+let dataActual = null;
+
+async function cargar(){
+  document.getElementById('banner').innerHTML = '<p class="notice">Cargando…</p>';
+  try{
+    dataActual = InvestAI.getUrl() ? await InvestAI.mercado(tickerActual) : InvestAI.demoMercado(tickerActual);
+  }catch(e){
+    dataActual = InvestAI.demoMercado(tickerActual);
+    dataActual._error = e.message;
+  }
+  renderBanner();
+  render();
+}
+
+function renderBanner(){
+  const d = dataActual;
+  const aviso = d._demo
+    ? `<div class="notice warn">⚠️ Modo demo (${d._error ? 'API no respondió: ' + d._error : 'sin URL de API configurada'}). <a href="index.html">Configurar API</a>.</div>`
+    : '';
+  document.getElementById('banner').innerHTML = `
+    <div class="stat-row" style="margin-top:${aviso?'14px':'4px'};">
+      <div class="stat"><span class="num mono">${d.moneda} ${Number(d.precio_actual).toFixed(2)}</span><span class="lbl">${d.nombre}</span></div>
+      <div class="stat"><span class="num mono">${d.total_registros}</span><span class="lbl">registros</span></div>
+      <div class="stat"><span class="num mono">${d.fecha_actual}</span><span class="lbl">última fecha</span></div>
+    </div>${aviso}`;
+}
+
+function serieLinea(campo){
+  return dataActual.serie.filter(p => p[campo]!=null).map(p => ({x:new Date(p.fecha), y:p[campo]}));
+}
+
+function render(){
+  const serie = dataActual.serie;
+  const velas = serie.map(p => ({x:new Date(p.fecha), o:p.apertura, h:p.maximo, l:p.minimo, c:p.cierre}));
+  const datasets = [{
+    label: tickerActual, data: velas, type: 'candlestick',
+    color:{up:cMalaquita, down:'#D64545', unchanged:cMuted},
+  }];
+  if(document.getElementById('chkSma').checked){
+    datasets.push({type:'line', label:'SMA 20', data:serieLinea('sma_20'), borderColor:cAccent, borderWidth:1.5, pointRadius:0});
+    datasets.push({type:'line', label:'SMA 50', data:serieLinea('sma_50'), borderColor:'#7A9CB0', borderWidth:1.5, pointRadius:0});
+  }
+  if(document.getElementById('chkEma').checked){
+    datasets.push({type:'line', label:'EMA 12', data:serieLinea('ema_12'), borderColor:'#D9A24A', borderWidth:1.2, pointRadius:0, borderDash:[4,3]});
+    datasets.push({type:'line', label:'EMA 26', data:serieLinea('ema_26'), borderColor:'#8FBFA6', borderWidth:1.2, pointRadius:0, borderDash:[4,3]});
+  }
+
+  const opts = {
+    responsive:true, maintainAspectRatio:false,
+    scales:{
+      x:{type:'time', time:{unit:'week'}, ticks:{color:cMuted}, grid:{color:cBorder}},
+      y:{ticks:{color:cMuted}, grid:{color:cBorder}},
+    },
+    plugins:{legend:{labels:{color:cText}}},
+  };
+
+  if(velasChart) velasChart.destroy();
+  velasChart = new Chart(document.getElementById('chartVelas'), {data:{datasets}, options:opts});
+
+  if(rsiChart) rsiChart.destroy();
+  rsiChart = new Chart(document.getElementById('chartRsi'), {
+    type:'line',
+    data:{datasets:[{label:'RSI-14', data:serieLinea('rsi_14'), borderColor:cAccent, borderWidth:1.5, pointRadius:0}]},
+    options:{responsive:true, maintainAspectRatio:false,
+      scales:{x:{type:'time', time:{unit:'week'}, ticks:{color:cMuted}, grid:{color:cBorder}},
+              y:{min:0, max:100, ticks:{color:cMuted}, grid:{color:cBorder}}},
+      plugins:{legend:{labels:{color:cText}}}},
+  });
+}
+
+cargar();
+</script>
+</body>
+</html>

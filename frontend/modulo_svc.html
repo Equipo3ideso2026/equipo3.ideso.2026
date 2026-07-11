@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvestAI — Clasificador SVC</title>
+<link rel="stylesheet" href="investai-style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">Ernesto Investing AI<small>CLASIFICADOR SVC · BUY / SELL</small></div>
+  <nav class="tabs">
+    <a href="index.html">Portal</a>
+    <a href="modulo_mercado.html">Mercado</a>
+    <a href="modulo_svc.html" class="active">Clasificador SVC</a>
+  </nav>
+</header>
+<div class="veta"></div>
+
+<main>
+  <div class="card">
+    <div class="ticker-row" id="tickerRow"></div>
+    <div id="contenido"><p class="notice">Cargando…</p></div>
+  </div>
+
+  <div class="card">
+    <h2>Sobre esta señal</h2>
+    <p class="lead" style="margin:0;">El clasificador SVC (kernel óptimo por GridSearchCV, validado con TimeSeriesSplit) se entrena sobre indicadores técnicos y produce una señal binaria BUY/SELL para el día vigente. La API expone la última señal calculada y persistida en MongoDB — no reentrena en cada consulta.</p>
+  </div>
+</main>
+<footer>InvestAI · Modelo: Support Vector Classifier · Colección: predicciones (MongoDB Atlas)</footer>
+
+<script src="investai-api.js"></script>
+<script>
+let tickerActual = InvestAI.TICKERS[0].ticker;
+
+document.getElementById('tickerRow').innerHTML = InvestAI.TICKERS.map(t =>
+  `<button data-t="${t.ticker}" class="${t.ticker===tickerActual?'active':''}">${t.ticker}</button>`).join('');
+
+document.getElementById('tickerRow').addEventListener('click', (e) => {
+  const btn = e.target.closest('button'); if(!btn) return;
+  tickerActual = btn.dataset.t;
+  [...document.querySelectorAll('#tickerRow button')].forEach(b => b.classList.toggle('active', b===btn));
+  cargar();
+});
+
+async function cargar(){
+  const cont = document.getElementById('contenido');
+  cont.innerHTML = '<p class="notice">Cargando…</p>';
+  let d, error=null;
+  try{
+    d = InvestAI.getUrl() ? await InvestAI.svc(tickerActual) : InvestAI.demoSvc(tickerActual);
+  }catch(e){
+    d = InvestAI.demoSvc(tickerActual); error = e.message;
+  }
+  render(d, error);
+}
+
+function render(d, error){
+  const esBuy = d.señal === 'BUY';
+  const confPct = d.confianza != null ? (d.confianza*100).toFixed(1)+'%' : 'N/D';
+  const aviso = d._demo
+    ? `<div class="notice warn">⚠️ Modo demo (${error ? 'API no respondió: '+error : 'sin URL de API configurada'}). <a href="index.html">Configurar API</a>.</div>`
+    : '';
+  const hp = d.hiperparametros ? Object.entries(d.hiperparametros)
+    .map(([k,v]) => `<tr><td class="mono">${k}</td><td class="mono">${v}</td></tr>`).join('') : '';
+
+  document.getElementById('contenido').innerHTML = `
+    ${aviso}
+    <div class="stat-row" style="margin-top:${aviso?'16px':'4px'};align-items:center;">
+      <div class="stat">
+        <span class="${esBuy?'badge-buy':'badge-sell'}">${d.señal}</span>
+        <span class="lbl" style="margin-top:8px;">${d.nombre}</span>
+      </div>
+      <div class="stat"><span class="num mono">${confPct}</span><span class="lbl">confianza del modelo</span></div>
+      <div class="stat"><span class="num mono">${Number(d.ultimo_cierre).toFixed(2)}</span><span class="lbl">último cierre</span></div>
+      <div class="stat"><span class="num mono">${d.fecha_referencia}</span><span class="lbl">fecha de referencia</span></div>
+    </div>
+    ${hp ? `<h2 style="margin-top:22px;">Hiperparámetros del modelo (GridSearchCV)</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+      <tbody>${hp}</tbody>
+    </table>` : ''}
+    <p class="notice" style="margin-top:16px;">Métricas de desempeño (accuracy, F1, matriz de confusión) se calculan en el Notebook 2 y se guardan en <span class="mono">metricas_modelos</span>; se pueden exponer agregando un endpoint adicional a la API si el equipo lo requiere.</p>
+  `;
+}
+
+cargar();
+</script>
+</body>
+</html>
