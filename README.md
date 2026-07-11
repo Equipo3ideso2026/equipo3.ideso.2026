@@ -69,7 +69,14 @@ ernesto-investing-ai/
 ├── requirements.txt                   # Dependencias de la app Streamlit
 ├── app.py                             # App Streamlit autónoma (bono)
 │
-├── notebooks/                         # Google Colab
+├── frontend/                          # Interfaces web (HTML + API FastAPI)
+│   ├── index.html                     # Portal de entrada
+│   ├── modulo_mercado.html      
+│   ├── modulo_svc.html                
+│   ├── h  
+│   ├── i        
+│
+└── notebooks/                         # Google Colab
     ├── Notebook1_Ingesta_MongoDB.ipynb
     ├── Notebook2_SVC_MongoDB.ipynb
     ├── Notebook3_RNN_MongoDB.ipynb
