@@ -73,8 +73,8 @@ ernesto-investing-ai/
 │   ├── index.html                     # Portal de entrada
 │   ├── modulo_mercado.html      
 │   ├── modulo_svc.html                
-│   ├── h  
-│   ├── i        
+│   ├── investai-style.css 
+│   ├── investai-api.js   
 │
 └── notebooks/                         # Google Colab
     ├── Notebook1_Ingesta_MongoDB.ipynb
