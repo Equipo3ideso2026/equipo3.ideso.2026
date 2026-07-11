@@ -735,7 +735,7 @@ def pipeline_ligero(ticker: str, forzar: bool = False):
 # Sidebar
 # ─────────────────────────────────────────────────────────────────────────
 st.sidebar.markdown("## 📈 Invest**AI** · Autónomo")
-st.sidebar.caption("UNMSM · FISI · iDeSo 2026-II · Grupo 10 — sin Colab/ngrok")
+st.sidebar.caption("UNMSM · FISI · iDeSo 2026-I · Grupo 3 — sin Colab/ngrok")
 ticker = st.sidebar.selectbox("Ticker minero", TICKERS, format_func=lambda t: f"{t} — {EMPRESAS_META.get(t, {}).get('nombre', t)}")
 pagina = st.sidebar.radio(
     "Módulo",
